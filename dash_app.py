@@ -90,6 +90,8 @@ def update_map(country_codes):
 # Add the map figure and dropdown menu to the app layout
 app.layout = html.Div([dropdown, dcc.Graph(id="map-graph", figure=fig)])
 
+# Assign the server attribute
+server = app.server
 # app.run_server(debug=True)
 if __name__ == "__main__":
     app.run_server(debug=False)
