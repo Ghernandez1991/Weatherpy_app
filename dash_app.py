@@ -11,7 +11,7 @@ from dash.dependencies import Input, Output
 # Read the data into a pandas DataFrame
 conn = sqlite3.connect("weather.db")
 cursor = conn.cursor()
-query = "SELECT * FROM all_weather_data"
+query = "SELECT * FROM all_weather_data limit 500"
 data = pd.read_sql_query(query, conn)
 print(data.columns)
 data["datetime"] = pd.to_datetime(data["datetime"], unit="s")
