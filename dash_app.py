@@ -87,6 +87,7 @@ def update_map(country_codes):
         lat="lat",
         lon="long",
         hover_name="City",
+        hover_data=["Temp_max"],  # Include Temp_max in the hover data
         zoom=2,
         height=600,
         mapbox_style="carto-darkmatter",  # Use a more detailed map style
