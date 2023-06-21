@@ -11,7 +11,7 @@ from dash.dependencies import Input, Output
 # Read the data into a pandas DataFrame
 conn = sqlite3.connect("weather.db")
 cursor = conn.cursor()
-query = "SELECT * FROM all_weather_data limit 500"
+query = "SELECT * FROM all_weather_data"
 data = pd.read_sql_query(query, conn)
 print(data.columns)
 data["datetime"] = pd.to_datetime(data["datetime"], unit="s")
@@ -19,14 +19,13 @@ app = dash.Dash(__name__)
 
 # Create the map figure using scatter_mapbox
 fig = px.scatter_mapbox(
-    data,
+    pd.DataFrame(columns=["lat", "long", "City", "Temp_max"]),
     lat="lat",
     lon="long",
     hover_name="City",
     zoom=2,
     height=600,
-    mapbox_style="carto-positron",  # Use a more detailed map style
-    animation_frame="datetime",  # Specify the column for animation
+    mapbox_style="carto-darkmatter",  # Use a more detailed map style
 )
 
 # Update marker attributes based on temperature
@@ -42,27 +41,47 @@ fig.update_traces(
     selector=dict(mode="markers"),  # Select the markers for updating color
 )
 
-# Create the dropdown menu options
-country_codes = data["country_code"].unique()
-dropdown_options = [{"label": code, "value": code} for code in country_codes]
+# Create the dropdown menu options for datetime
+datetime_options = (
+    pd.to_datetime(data["datetime"]).dt.strftime("%Y-%m-%d %H:%M:%S").unique()
+)
+datetime_dropdown_options = [{"label": dt, "value": dt} for dt in datetime_options]
 
-# Add the dropdown menu component
-dropdown = dcc.Dropdown(
-    id="country-dropdown",
-    options=dropdown_options,
+# Create the dropdown menu options for country codes
+country_code_options = data["country_code"].unique()
+country_code_dropdown_options = [
+    {"label": code, "value": code} for code in country_code_options
+]
+
+# Add the datetime dropdown menu component
+datetime_dropdown = dcc.Dropdown(
+    id="datetime-dropdown",
+    options=datetime_dropdown_options,
+    value=None,
+    multi=True,  # Enable multiple selection
+    placeholder="Select datetime(s)",
+)
+
+# Add the country code dropdown menu component
+country_code_dropdown = dcc.Dropdown(
+    id="country-code-dropdown",
+    options=country_code_dropdown_options,
     value=None,
     multi=True,  # Enable multiple selection
     placeholder="Select country code(s)",
 )
 
 
-# Define the callback function to update the map based on the selected country codes
-@app.callback(Output("map-graph", "figure"), Input("country-dropdown", "value"))
+@app.callback(
+    Output("map-graph", "figure"),
+    [Input("country-code-dropdown", "value")],
+)
 def update_map(country_codes):
-    if country_codes is None:
-        filtered_data = data
-    else:
+    if country_codes is not None:
         filtered_data = data[data["country_code"].isin(country_codes)]
+    else:
+        filtered_data = pd.DataFrame(columns=["lat", "long", "City", "Temp_max"])
+
     fig = px.scatter_mapbox(
         filtered_data,
         lat="lat",
@@ -70,8 +89,7 @@ def update_map(country_codes):
         hover_name="City",
         zoom=2,
         height=600,
-        mapbox_style="carto-positron",  # Use a more detailed map style
-        animation_frame="datetime",  # Specify the column for animation
+        mapbox_style="carto-darkmatter",  # Use a more detailed map style
     )
     fig.update_traces(
         marker=dict(
@@ -87,8 +105,10 @@ def update_map(country_codes):
     return fig
 
 
-# Add the map figure and dropdown menu to the app layout
-app.layout = html.Div([dropdown, dcc.Graph(id="map-graph", figure=fig)])
+# Add the map figure and dropdown menus to the app layout
+app.layout = html.Div(
+    [datetime_dropdown, country_code_dropdown, dcc.Graph(id="map-graph", figure=fig)]
+)
 
 # Assign the server attribute
 server = app.server
